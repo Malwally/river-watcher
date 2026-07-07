@@ -1,0 +1,34 @@
+name: Tidal River Availability Check
+
+on:
+  schedule:
+    # Runs every 10 minutes, every day, forever (until you delete/disable it).
+    # Public repos get unlimited free Actions minutes, so this costs nothing.
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}   # lets you click "Run workflow" manually to test
+
+permissions:
+  contents: write   # needed so the workflow can save/update state.json
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run availability check
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+        run: python check_availability.py
+
+      - name: Save updated state
+        run: |
+          git config user.name "availability-bot"
+          git config user.email "actions@github.com"
+          git add state.json
+          git diff --staged --quiet || git commit -m "Update availability state"
+          git push
